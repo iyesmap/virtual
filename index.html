@@ -293,7 +293,7 @@
 <div id="loading">Loading map data...</div>
 
 <div id="map-container">
-  <img id="map-img" src="map.jpg" alt="School Map" draggable="false">
+  <img id="map-img" src="school_map.png" alt="School Map" draggable="false">
   <!-- Pins inserted by JS -->
 </div>
 
@@ -399,6 +399,11 @@ function buildPins() {
   }
 }
 
+function driveUrl(url) {
+  const m = url.match(/[-\w]{25,}/);
+  return m ? `https://drive.google.com/thumbnail?id=${m[0]}&sz=w800` : url;
+}
+
 function openModal(num) {
   const f = facilities[num] || { name: 'Facility ' + num, photo: '' };
   document.getElementById('modal-num').textContent = num;
@@ -408,7 +413,7 @@ function openModal(num) {
   const noPhoto = document.getElementById('modal-no-photo');
 
   if (f.photo && f.photo.length > 5) {
-    img.src = f.photo;
+    img.src = driveUrl(f.photo);
     img.style.display = 'block';
     noPhoto.style.display = 'none';
     img.onerror = () => { img.style.display = 'none'; noPhoto.style.display = 'flex'; };
