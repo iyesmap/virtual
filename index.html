@@ -315,7 +315,10 @@
     </div>
     <div id="modal-body">
       <div id="modal-photo-wrap">
-        <img id="modal-photo" src="" alt="" style="display:none;">
+        <div id="pano-viewer" style="display:none; width:100%; height:100%; position:relative; overflow:hidden; cursor:grab; background:#000; border-radius:12px;">
+          <img id="modal-photo" src="" alt="" style="position:absolute; height:100%; width:auto; max-width:none; top:0; left:0; user-select:none; pointer-events:none;">
+          <div id="pano-hint" style="position:absolute; bottom:12px; left:50%; transform:translateX(-50%); background:rgba(0,0,0,0.5); color:#fff; font-size:0.78rem; padding:5px 12px; border-radius:20px; pointer-events:none; white-space:nowrap;">← i-drag para mag-ikot →</div>
+        </div>
         <div id="modal-no-photo">
           <svg width="48" height="48" fill="none" viewBox="0 0 24 24"><rect x="3" y="5" width="18" height="14" rx="3" stroke="#7aa5c9" stroke-width="1.5"/><circle cx="8.5" cy="10.5" r="1.5" fill="#7aa5c9"/><path d="M3 17l5-5 4 4 3-3 6 4" stroke="#7aa5c9" stroke-width="1.5" stroke-linecap="round"/></svg>
           <span>Walang photo pa</span>
@@ -412,6 +415,50 @@ function driveUrl(url) {
   return m ? `https://drive.google.com/thumbnail?id=${m[0]}&sz=w800` : url;
 }
 
+// --- Panorama drag logic ---
+let panoState = { dragging: false, startX: 0, scrollLeft: 0 };
+
+function initPano() {
+  const viewer = document.getElementById('pano-viewer');
+  const img = document.getElementById('modal-photo');
+  const hint = document.getElementById('pano-hint');
+
+  // Center image after load
+  img.onload = () => {
+    const maxScroll = img.offsetWidth - viewer.offsetWidth;
+    viewer.scrollLeft = maxScroll / 2;
+    setTimeout(() => { if (hint) hint.style.opacity = '0'; }, 2500);
+  };
+
+  // Mouse drag
+  viewer.onmousedown = (e) => {
+    panoState.dragging = true;
+    panoState.startX = e.pageX - viewer.offsetLeft;
+    panoState.scrollLeft = viewer.scrollLeft;
+    viewer.style.cursor = 'grabbing';
+    e.preventDefault();
+  };
+  viewer.onmousemove = (e) => {
+    if (!panoState.dragging) return;
+    const x = e.pageX - viewer.offsetLeft;
+    viewer.scrollLeft = panoState.scrollLeft - (x - panoState.startX);
+  };
+  viewer.onmouseup = () => { panoState.dragging = false; viewer.style.cursor = 'grab'; };
+  viewer.onmouseleave = () => { panoState.dragging = false; viewer.style.cursor = 'grab'; };
+
+  // Touch drag
+  viewer.ontouchstart = (e) => {
+    panoState.startX = e.touches[0].pageX;
+    panoState.scrollLeft = viewer.scrollLeft;
+  };
+  viewer.ontouchmove = (e) => {
+    const x = e.touches[0].pageX;
+    viewer.scrollLeft = panoState.scrollLeft - (x - panoState.startX);
+    e.preventDefault();
+  };
+}
+initPano();
+
 function openModal(num) {
   const f = facilities[num] || { name: 'Facility ' + num, photo: '' };
   document.getElementById('modal-num').textContent = num;
@@ -419,14 +466,18 @@ function openModal(num) {
 
   const img = document.getElementById('modal-photo');
   const noPhoto = document.getElementById('modal-no-photo');
+  const viewer = document.getElementById('pano-viewer');
+  const hint = document.getElementById('pano-hint');
 
   if (f.photo && f.photo.length > 5) {
     img.src = driveUrl(f.photo);
-    img.style.display = 'block';
+    viewer.style.display = 'block';
+    viewer.scrollLeft = 0;
+    if (hint) hint.style.opacity = '1';
     noPhoto.style.display = 'none';
-    img.onerror = () => { img.style.display = 'none'; noPhoto.style.display = 'flex'; };
+    img.onerror = () => { viewer.style.display = 'none'; noPhoto.style.display = 'flex'; };
   } else {
-    img.style.display = 'none';
+    viewer.style.display = 'none';
     noPhoto.style.display = 'flex';
   }
 
