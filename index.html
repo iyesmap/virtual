@@ -365,7 +365,7 @@
   }
   .gmap-embed {
     width: 100%;
-    height: 380px;
+    height: 450px;
     border: none;
     display: block;
   }
@@ -401,8 +401,17 @@
   <!-- Pins inserted by JS -->
 </div>
 
+<!-- LEGEND -->
+<div class="card" id="legend-card" style="width:min(900px, 95vw);margin:24px auto;">
+  <div class="card-header" style="justify-content:space-between;">
+    <h3>📋 Mga Pasilidad ng Paaralan</h3>
+    <span id="legend-count" style="font-size:0.75rem;color:rgba(255,255,255,0.65);"></span>
+  </div>
+  <div class="legend-grid" id="legend-grid" style="display:grid;grid-template-columns:repeat(auto-fill,minmax(200px,1fr));gap:4px;padding:16px 20px;"></div>
+</div>
+
 <!-- GOOGLE MAP EMBED -->
-<div class="card" style="max-width:960px;margin:24px auto;">
+<div class="card" style="width:min(900px, 95vw);margin:24px auto;">
   <div class="card-header">
     <h3>📍 Lokasyon — Google Maps</h3>
   </div>
@@ -563,6 +572,40 @@ fetch(CSV_URL)
   .catch(() => {
     document.getElementById('loading').textContent = '⚠️ Hindi ma-load ang data. I-check ang CSV URL.';
     buildPins();
+  });
+</script>
+
+<script>
+// Populate legend from CSV
+fetch(CSV_URL)
+  .then(r => r.text())
+  .then(text => {
+    const rows = text.trim().split('\n').map(r => {
+      const cols = []; let cur = ''; let inQ = false;
+      for (let ch of r) {
+        if (ch === '"') inQ = !inQ;
+        else if (ch === ',' && !inQ) { cols.push(cur.trim()); cur = ''; }
+        else cur += ch;
+      }
+      cols.push(cur.trim());
+      return cols;
+    });
+    const headers = rows[0].map(h => h.toLowerCase());
+    const numIdx = headers.findIndex(h => h.includes('num') || h === 'id' || h === 'no');
+    const nameIdx = headers.findIndex(h => h.includes('name') || h.includes('facilit') || h.includes('pasilidad'));
+    const grid = document.getElementById('legend-grid');
+    const count = document.getElementById('legend-count');
+    const items = rows.slice(1).filter(r => r[numIdx] && r[nameIdx]);
+    count.textContent = items.length + ' na lokasyon ang nakalagay sa mapa';
+    grid.innerHTML = items.map(r =>
+      `<div style="display:flex;align-items:center;gap:10px;padding:6px 8px;border-radius:6px;">
+        <div style="width:26px;height:26px;border-radius:50%;background:#0d1f5c;color:white;font-size:0.65rem;font-weight:700;display:flex;align-items:center;justify-content:center;flex-shrink:0;border:2px solid white;box-shadow:0 1px 6px rgba(0,0,0,0.25);">${r[numIdx]}</div>
+        <span style="font-size:0.78rem;font-weight:600;color:#2d3748;line-height:1.3;">${r[nameIdx]}</span>
+      </div>`
+    ).join('');
+  })
+  .catch(() => {
+    document.getElementById('legend-grid').innerHTML = '<p style="padding:16px;color:#888;">Hindi ma-load ang listahan ng pasilidad.</p>';
   });
 </script>
 </body>
