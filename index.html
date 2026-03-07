@@ -171,6 +171,7 @@
     z-index: 1000;
     align-items: center;
     justify-content: center;
+    gap: 16px;
     backdrop-filter: blur(4px);
     animation: fadeIn 0.22s;
   }
@@ -184,7 +185,7 @@
     border-radius: 12px;
     max-width: 800px;
     width: 90vw;
-    height: 100dvh;
+    height: 90vh;
     max-height: 90vh;
     overflow: hidden;
     box-shadow: 0 8px 40px rgba(0,0,0,0.4);
@@ -370,6 +371,74 @@
     border: none;
     display: block;
   }
+  /* Teacher Modal */
+  #teacher-overlay {
+    display: none;
+    flex-direction: column;
+    background: var(--white);
+    border-radius: 12px;
+    overflow: hidden;
+    box-shadow: 0 8px 40px rgba(0,0,0,0.4);
+    animation: slideUp 0.28s cubic-bezier(.22,.68,0,1.2);
+    height: 90vh;
+    width: 280px;
+    flex-shrink: 0;
+  }
+  #teacher-overlay.active { display: flex; }
+
+  #teacher-modal {
+    display: flex;
+    flex-direction: column;
+    height: 100%;
+  }
+
+  #teacher-photo-wrap {
+    flex: 1;
+    min-height: 0;
+    overflow: hidden;
+    background: var(--light-blue);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+  }
+  #teacher-photo {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+    object-position: top center;
+    display: block;
+  }
+  #teacher-no-photo {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: 8px;
+    padding: 32px;
+    color: var(--blue-mid);
+    font-size: 0.95rem;
+    font-weight: 600;
+  }
+  #teacher-info {
+    background: linear-gradient(135deg, var(--blue-dark) 0%, var(--blue-mid) 100%);
+    padding: 18px 16px;
+    text-align: center;
+  }
+  #teacher-name {
+    color: white;
+    font-family: 'Baloo 2', cursive;
+    font-size: 1.1rem;
+    font-weight: 800;
+    line-height: 1.3;
+    margin-bottom: 4px;
+  }
+  #teacher-position {
+    color: rgba(255,255,255,0.8);
+    font-size: 0.82rem;
+    font-weight: 500;
+    font-style: italic;
+  }
+
 </style>
 </head>
 <body>
@@ -441,6 +510,22 @@
       <button id="back-btn" onclick="closeModal()">← Bumalik sa Map</button>
     </div>
   </div>
+<!-- TEACHER MODAL -->
+<div id="teacher-overlay">
+  <div id="teacher-modal">
+    <div id="teacher-photo-wrap">
+      <img id="teacher-photo" src="" alt="">
+      <div id="teacher-no-photo">
+        <svg width="48" height="48" fill="none" viewBox="0 0 24 24"><circle cx="12" cy="8" r="4" stroke="#7aa5c9" stroke-width="1.5"/><path d="M4 20c0-4 3.6-7 8-7s8 3 8 7" stroke="#7aa5c9" stroke-width="1.5" stroke-linecap="round"/></svg>
+        <span>Walang photo</span>
+      </div>
+    </div>
+    <div id="teacher-info">
+      <div id="teacher-name"></div>
+      <div id="teacher-position"></div>
+    </div>
+  </div>
+</div>
 </div>
 
 <footer>Ilayang Yuni Elementary School &bull; Interactive Map</footer>
@@ -503,7 +588,10 @@ function parseCSV(text) {
     const num = parseInt(cols[0]);
     const name = cols[1] ? cols[1].trim().replace(/^"|"$/g, '') : '';
     const photo = cols[2] ? cols[2].trim().replace(/^"|"$/g, '') : '';
-    if (num) data[num] = { name, photo };
+    const teacher = cols[3] ? cols[3].trim().replace(/^"|"$/g, '') : '';
+    const position = cols[4] ? cols[4].trim().replace(/^"|"$/g, '') : '';
+    const teacher_url = cols[5] ? cols[5].trim().replace(/^"|"$/g, '') : '';
+    if (num) data[num] = { name, photo, teacher, position, teacher_url };
   }
   return data;
 }
@@ -530,7 +618,7 @@ function driveUrl(url) {
 }
 
 function openModal(num) {
-  const f = facilities[num] || { name: 'Facility ' + num, photo: '' };
+  const f = facilities[num] || { name: 'Facility ' + num, photo: '', teacher: '', position: '', teacher_url: '' };
   document.getElementById('modal-num').textContent = num;
   document.getElementById('modal-title').textContent = f.name;
 
@@ -547,12 +635,41 @@ function openModal(num) {
     noPhoto.style.display = 'flex';
   }
 
+  // Teacher panel
+  const teacherOverlay = document.getElementById('teacher-overlay');
+  const hasTeacher = f.teacher && f.teacher.length > 1;
+
+  if (hasTeacher) {
+    const tPhoto = document.getElementById('teacher-photo');
+    const tNoPhoto = document.getElementById('teacher-no-photo');
+    document.getElementById('teacher-name').textContent = f.teacher;
+    document.getElementById('teacher-position').textContent = f.position || '';
+
+    if (f.teacher_url && f.teacher_url.length > 5) {
+      tPhoto.src = driveUrl(f.teacher_url);
+      tPhoto.style.display = 'block';
+      tNoPhoto.style.display = 'none';
+      tPhoto.onerror = () => { tPhoto.style.display = 'none'; tNoPhoto.style.display = 'flex'; };
+    } else {
+      tPhoto.style.display = 'none';
+      tNoPhoto.style.display = 'flex';
+    }
+    teacherOverlay.classList.add('active');
+
+    // Align facility modal height with teacher modal
+    document.getElementById('modal').style.maxHeight = '90vh';
+  } else {
+    teacherOverlay.classList.remove('active');
+    document.getElementById('modal').style.maxHeight = '90vh';
+  }
+
   document.getElementById('modal-overlay').classList.add('active');
   document.body.style.overflow = 'hidden';
 }
 
 function closeModal() {
   document.getElementById('modal-overlay').classList.remove('active');
+  document.getElementById('teacher-overlay').classList.remove('active');
   document.body.style.overflow = '';
 }
 
